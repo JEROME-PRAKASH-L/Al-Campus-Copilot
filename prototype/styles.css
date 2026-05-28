@@ -451,3 +451,97 @@ input { font: inherit; }
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* --- Modal backdrop (shared) ---------------------------------------------- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(26, 23, 20, 0.42);
+  display: grid; place-items: center;
+  z-index: 60;
+  padding: 24px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.modal {
+  width: 100%;
+  max-width: 460px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(26, 23, 20, 0.18);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.modal-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--rule); }
+.modal-eyebrow {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.modal-title {
+  font-family: var(--headline-font);
+  font-size: 22px; margin: 0; font-weight: 500; letter-spacing: -0.01em;
+}
+
+/* --- Auth modal ----------------------------------------------------------- */
+.auth-backdrop { z-index: 80; background: rgba(26, 23, 20, 0.5); }
+.auth-modal { max-width: 420px; }
+.auth-body { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 10px; }
+.auth-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.auth-body input {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.auth-body input:focus { border-color: var(--accent); }
+.auth-submit {
+  margin-top: 6px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--paper);
+  font-size: 14px;
+  font-weight: 500;
+  transition: filter 0.12s, transform 0.12s;
+}
+.auth-submit:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.auth-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.auth-note {
+  color: var(--muted);
+  font-size: 10.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+
+/* --- Sidebar user pill: sign-out button ----------------------------------- */
+.user-pill { gap: 10px; }
+.user-pill-text { flex: 1; min-width: 0; }
+.user-pill .user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-signout {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.12s, background 0.12s;
+}
+.user-signout:hover { color: var(--ink); background: var(--paper-2); }
