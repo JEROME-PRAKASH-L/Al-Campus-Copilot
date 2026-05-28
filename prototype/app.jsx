@@ -131,11 +131,19 @@ function ChatScreen() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
+  const [activeCitation, setActiveCitation] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" });
   }, [messages, pending]);
+
+  useEffect(() => {
+    if (!activeCitation) return;
+    const onKey = (e) => e.key === "Escape" && setActiveCitation(null);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [activeCitation]);
 
   async function ask(q) {
     const question = (q ?? input).trim();
@@ -152,7 +160,7 @@ function ChatScreen() {
     setMessages((m) => [
       ...m,
       { role: "user", content: question },
-      { role: "assistant", content: "", citations, status: "thinking" },
+      { role: "assistant", content: "", citations, question, status: "thinking" },
     ]);
 
     let answer;
@@ -199,6 +207,20 @@ function ChatScreen() {
     setPending(false);
   }
 
+  function openCitation(msg, idx) {
+    const cit = msg.citations?.find((c) => c.index === idx);
+    if (!cit) return;
+    const chunk = SEED.chunks.find((c) => c.doc === cit.doc);
+    if (!chunk) return;
+    setActiveCitation({
+      index: cit.index,
+      doc: cit.doc,
+      similarity: cit.similarity,
+      text: chunk.text,
+      question: msg.question || "",
+    });
+  }
+
   return (
     <div className="chat-screen">
       <header className="screen-header">
@@ -214,7 +236,9 @@ function ChatScreen() {
       <div ref={scrollRef} className="chat-scroll">
         <div className="chat-inner">
           {messages.length === 0 && <ChatEmpty onPick={ask} />}
-          {messages.map((m, i) => <Bubble key={i} msg={m} />)}
+          {messages.map((m, i) => (
+            <Bubble key={i} msg={m} onCitationClick={(idx) => openCitation(m, idx)} />
+          ))}
           {pending && messages[messages.length - 1]?.content === "" && (
             <div className="thinking">
               <span /><span /><span />
@@ -241,6 +265,13 @@ function ChatScreen() {
           <span className="mono">grounded · top-6 cosine · cite-or-decline</span>
         </div>
       </div>
+
+      {activeCitation && (
+        <CitationModal
+          citation={activeCitation}
+          onClose={() => setActiveCitation(null)}
+        />
+      )}
     </div>
   );
 }
@@ -271,7 +302,7 @@ function ChatEmpty({ onPick }) {
   );
 }
 
-function Bubble({ msg }) {
+function Bubble({ msg, onCitationClick }) {
   if (msg.role === "user") {
     return (
       <div className="bubble-row user">
@@ -282,15 +313,23 @@ function Bubble({ msg }) {
   return (
     <div className="bubble-row assistant">
       <div className="assistant-eyebrow mono">Copilot</div>
-      <div className="bubble-text">{renderWithCitations(msg.content, msg.citations || [])}</div>
+      <div className="bubble-text">
+        {renderWithCitations(msg.content, msg.citations || [], onCitationClick)}
+      </div>
       {msg.citations && msg.citations.length > 0 && (
         <div className="citations">
           {msg.citations.map((c) => (
-            <span key={c.index} className="citation-chip">
+            <button
+              key={c.index}
+              type="button"
+              className="citation-chip"
+              onClick={() => onCitationClick?.(c.index)}
+              title={`Open "${c.doc}"`}
+            >
               <span className="citation-n">[{c.index}]</span>
               <span className="citation-doc">{c.doc}</span>
               <span className="citation-sim mono">{c.similarity.toFixed(2)}</span>
-            </span>
+            </button>
           ))}
         </div>
       )}
@@ -298,15 +337,83 @@ function Bubble({ msg }) {
   );
 }
 
-function renderWithCitations(text, citations) {
+function CitationModal({ citation, onClose }) {
+  const tokens = useMemo(() => {
+    return (citation.question.toLowerCase().match(/[a-z0-9]+/g) || [])
+      .filter((t) => t.length > 2);
+  }, [citation.question]);
+
+  function backdropClick(e) {
+    if (e.target === e.currentTarget) onClose();
+  }
+
+  return (
+    <div className="modal-backdrop" onMouseDown={backdropClick}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="Source preview">
+        <header className="modal-head">
+          <div>
+            <div className="modal-eyebrow mono">
+              Source <span className="modal-cite-n">[{citation.index}]</span>
+              <span className="modal-sim"> · {citation.similarity.toFixed(2)} cosine</span>
+            </div>
+            <h2 className="modal-title">{citation.doc}</h2>
+          </div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+            <IconClose />
+          </button>
+        </header>
+        <div className="modal-body">
+          <p className="modal-text">{highlightTokens(citation.text, tokens)}</p>
+        </div>
+        <footer className="modal-foot mono">
+          In the real product this opens the source PDF page with the chunk highlighted.
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function highlightTokens(text, tokens) {
+  if (!tokens.length) return text;
+  const re = new RegExp(`(${tokens.map(escapeRegex).join("|")})`, "ig");
+  const lower = new Set(tokens.map((t) => t.toLowerCase()));
+  const parts = text.split(re);
+  return parts.map((p, i) =>
+    lower.has(p.toLowerCase())
+      ? <mark key={i} className="cite-mark">{p}</mark>
+      : <span key={i}>{p}</span>
+  );
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderWithCitations(text, citations, onClick) {
   const parts = text.split(/(\[\d+\])/g);
   return parts.map((p, i) => {
     const m = p.match(/^\[(\d+)\]$/);
     if (!m) return <span key={i}>{p}</span>;
     const n = Number(m[1]);
     const c = citations.find((x) => x.index === n);
+    if (!c) return <span key={i}>{p}</span>;
     return (
-      <sup key={i} className="inline-citation" title={c?.doc || ""}>{n}</sup>
+      <sup
+        key={i}
+        className="inline-citation"
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        title={`Open "${c.doc}"`}
+        onClick={() => onClick?.(n)}
+        onKeyDown={(e) => {
+          if (onClick && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onClick(n);
+          }
+        }}
+      >
+        {n}
+      </sup>
     );
   });
 }
@@ -648,6 +755,7 @@ const IconUpload    = () => <Svg><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2
 const IconCalendar  = () => <Svg><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Svg>;
 const IconBriefcase = () => <Svg><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></Svg>;
 const IconDoc       = () => <Svg><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></Svg>;
+const IconClose     = () => <Svg><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Svg>;
 
 // ---------- Mount -----------------------------------------------------------
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
