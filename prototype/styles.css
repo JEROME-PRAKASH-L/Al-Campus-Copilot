@@ -326,6 +326,41 @@ input { font: inherit; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.ingest-steps {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.ingest-step { display: flex; flex-direction: column; gap: 3px; }
+.ingest-step-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rule);
+  overflow: hidden;
+  position: relative;
+}
+.ingest-step-label {
+  font-size: 9.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.ingest-step-done .ingest-step-bar { background: var(--accent); }
+.ingest-step-done .ingest-step-label { color: var(--ink-2); }
+.ingest-step-active .ingest-step-bar {
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 60%, rgba(122, 82, 48, 0.25) 100%);
+  animation: ingest-pulse 1s ease-in-out infinite;
+}
+.ingest-step-active .ingest-step-label { color: var(--accent); }
+@keyframes ingest-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* --- Segmented controls --------------------------------------------------- */
 .seg {
   display: inline-flex; gap: 4px;

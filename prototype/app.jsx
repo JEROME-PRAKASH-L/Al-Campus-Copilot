@@ -312,19 +312,40 @@ function renderWithCitations(text, citations) {
 }
 
 // ---------- Upload ----------------------------------------------------------
+const INGEST_STEPS = ["parse", "chunk", "embed", "extract"];
+
 function UploadScreen() {
   const [drag, setDrag] = useState(false);
-  const [docs, setDocs] = useState(SEED.documents);
+  const [docs, setDocs] = useState(() =>
+    SEED.documents.map((d) => (d.status === "processing" ? { ...d, step: "parse" } : d))
+  );
+  const scheduled = useRef(new Set());
 
-  // Simulate processing → ready transition for the doc that starts processing.
+  function advance(id, step) {
+    setDocs((d) => d.map((x) => (x.id === id && x.status === "processing" ? { ...x, step } : x)));
+  }
+  function finish(id) {
+    setDocs((d) => d.map((x) => (x.id === id ? { ...x, status: "ready", step: undefined } : x)));
+  }
+
+  function scheduleIngest(id) {
+    if (scheduled.current.has(id)) return;
+    scheduled.current.add(id);
+    INGEST_STEPS.slice(1).forEach((step, i) => {
+      setTimeout(() => advance(id, step), 700 * (i + 1));
+    });
+    setTimeout(() => {
+      finish(id);
+      scheduled.current.delete(id);
+    }, 700 * INGEST_STEPS.length);
+  }
+
+  // Kick the pipeline for any processing doc we haven't scheduled yet.
   useEffect(() => {
-    const t = setTimeout(() => {
-      setDocs((d) =>
-        d.map((x) => (x.status === "processing" ? { ...x, status: "ready" } : x))
-      );
-    }, 4500);
-    return () => clearTimeout(t);
-  }, []);
+    docs.forEach((d) => {
+      if (d.status === "processing") scheduleIngest(d.id);
+    });
+  }, [docs]);
 
   function fakeDrop() {
     const id = "d" + Math.random().toString(36).slice(2, 7);
@@ -333,12 +354,10 @@ function UploadScreen() {
       title: "New Campus Notice " + new Date().toLocaleTimeString(),
       kind: "notice",
       status: "processing",
+      step: "parse",
       created_at: new Date().toISOString(),
     };
     setDocs((d) => [newDoc, ...d]);
-    setTimeout(() => {
-      setDocs((d) => d.map((x) => (x.id === id ? { ...x, status: "ready" } : x)));
-    }, 3000);
   }
 
   return (
@@ -379,8 +398,9 @@ function UploadScreen() {
                 <div className="lib-sub mono">
                   {d.kind} · {timeAgo(d.created_at)}
                 </div>
+                {d.status === "processing" && <IngestSteps current={d.step || "parse"} />}
               </div>
-              <StatusPill status={d.status} />
+              <StatusPill status={d.status} step={d.step} />
             </div>
           ))}
         </div>
@@ -389,12 +409,37 @@ function UploadScreen() {
   );
 }
 
-function StatusPill({ status }) {
+function StatusPill({ status, step }) {
   if (status === "ready")
     return <span className="pill pill-ok"><span className="dot" />ready</span>;
   if (status === "failed")
     return <span className="pill pill-bad">failed</span>;
-  return <span className="pill pill-busy"><span className="spinner" />processing</span>;
+  return (
+    <span className="pill pill-busy">
+      <span className="spinner" />
+      {step || "processing"}
+    </span>
+  );
+}
+
+function IngestSteps({ current }) {
+  const idx = INGEST_STEPS.indexOf(current);
+  return (
+    <ol className="ingest-steps" aria-label="Ingest pipeline progress">
+      {INGEST_STEPS.map((step, i) => {
+        const state =
+          i < idx ? "done" :
+          i === idx ? "active" :
+          "pending";
+        return (
+          <li key={step} className={`ingest-step ingest-step-${state}`}>
+            <span className="ingest-step-bar" />
+            <span className="ingest-step-label mono">{step}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 // ---------- Deadlines -------------------------------------------------------
