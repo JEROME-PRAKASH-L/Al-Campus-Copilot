@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getDemoUserId } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /** GET /api/deadlines → list, joined to source document title. */
 export async function GET(_req: NextRequest) {

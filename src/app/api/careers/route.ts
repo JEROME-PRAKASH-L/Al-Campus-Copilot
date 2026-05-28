@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getDemoUserId } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /** GET /api/careers → list internship/job cards. */
 export async function GET(_req: NextRequest) {
