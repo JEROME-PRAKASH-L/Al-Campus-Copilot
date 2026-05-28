@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI Campus Copilot — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="prototype/styles.css" />
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <rect width="200" height="200" fill="#faf7f2"/>
+    <rect x="60" y="40" width="80" height="100" rx="6" fill="#fff" stroke="#7a5230" stroke-width="2"/>
+    <line x1="72" y1="62" x2="128" y2="62" stroke="#7a5230" stroke-width="3"/>
+    <line x1="72" y1="78" x2="116" y2="78" stroke="#807668" stroke-width="2"/>
+    <line x1="72" y1="92" x2="124" y2="92" stroke="#807668" stroke-width="2"/>
+    <line x1="72" y1="106" x2="104" y2="106" stroke="#807668" stroke-width="2"/>
+    <circle cx="148" cy="148" r="22" fill="#7a5230"/>
+    <text x="148" y="156" font-size="22" fill="#faf7f2" text-anchor="middle" font-family="serif">?</text>
+  </svg>
+</template>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- React + Babel (pinned with integrity per project standards) -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Seed data first (plain JS, sets window.SEED) -->
+<script src="prototype/seed.js"></script>
+
+<!-- Tweaks panel scaffolding, then app -->
+<script type="text/babel" src="prototype/tweaks-panel.jsx"></script>
+<script type="text/babel" src="prototype/app.jsx"></script>
+</body>
+</html>
