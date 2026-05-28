@@ -158,7 +158,7 @@ function ChatScreen() {
     let answer;
     if (retrieved.length === 0) {
       answer = "I don't see that in your uploaded notices.";
-    } else {
+    } else if (typeof window.claude?.complete === "function") {
       try {
         const context = retrieved
           .map((r, i) => `[${i + 1}] (from "${r.doc}")\n${r.text}`)
@@ -177,8 +177,10 @@ function ChatScreen() {
         ].join("\n");
         answer = await window.claude.complete(prompt);
       } catch {
-        answer = "(Demo offline — answer would stream from Claude here.)";
+        answer = composeOfflineAnswer(question, retrieved);
       }
+    } else {
+      answer = composeOfflineAnswer(question, retrieved);
     }
 
     // Fake streaming for feel.
@@ -554,6 +556,27 @@ function Row({ label, value, accent }) {
 }
 
 // ---------- Helpers ---------------------------------------------------------
+function composeOfflineAnswer(question, retrieved) {
+  const tokens = (question.toLowerCase().match(/[a-z0-9]+/g) || []).filter((t) => t.length > 2);
+  const picked = [];
+  for (let i = 0; i < retrieved.length && picked.length < 2; i++) {
+    const sentences = retrieved[i].text.match(/[^.!?]+[.!?]+/g) || [retrieved[i].text];
+    let best = null;
+    let bestScore = 0;
+    for (const s of sentences) {
+      const hay = s.toLowerCase();
+      let score = 0;
+      for (const t of tokens) if (hay.includes(t)) score += 1;
+      if (score > bestScore) { bestScore = score; best = s.trim(); }
+    }
+    if (best) picked.push({ idx: i + 1, sentence: best });
+  }
+  if (!picked.length) {
+    return retrieved[0].text.split(/(?<=[.!?])\s+/)[0].trim() + " [1]";
+  }
+  return picked.map((p) => `${p.sentence} [${p.idx}]`).join(" ");
+}
+
 function retrieveChunks(query) {
   // Score each seed chunk by keyword overlap + tiny doc-title boost.
   const tokens = (query.toLowerCase().match(/[a-z0-9]+/g) || []).filter(t => t.length > 2);
