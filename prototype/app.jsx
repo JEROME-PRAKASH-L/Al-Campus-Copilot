@@ -24,10 +24,37 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "headline": "serif"
 }/*EDITMODE-END*/;
 
+// ---------- Mock auth -------------------------------------------------------
+const USER_KEY = "cc_user";
+
+function readStoredUser() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function useMockUser() {
+  const [user, setUser] = useState(() => readStoredUser());
+  function signIn(email) {
+    const u = { email, signed_in_at: Date.now() };
+    localStorage.setItem(USER_KEY, JSON.stringify(u));
+    setUser(u);
+  }
+  function signOut() {
+    localStorage.removeItem(USER_KEY);
+    setUser(null);
+  }
+  return { user, signIn, signOut };
+}
+
 // ---------- Root ------------------------------------------------------------
 function App() {
   const [tab, setTab] = useState("chat");
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const { user, signIn, signOut } = useMockUser();
 
   // Apply tweak values to CSS vars so styles cascade.
   useEffect(() => {
@@ -46,13 +73,15 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar tab={tab} setTab={setTab} />
+      <Sidebar tab={tab} setTab={setTab} user={user} onSignOut={signOut} />
       <main className="surface" data-screen-label={tab}>
         {tab === "chat"      && <ChatScreen />}
         {tab === "upload"    && <UploadScreen />}
         {tab === "deadlines" && <DeadlinesScreen />}
         {tab === "careers"   && <CareersScreen />}
       </main>
+
+      {!user && <AuthGate onSignIn={signIn} />}
 
       <TweaksPanel title="Tweaks">
         <TweakSection title="Look">
@@ -87,13 +116,14 @@ function App() {
 }
 
 // ---------- Sidebar ---------------------------------------------------------
-function Sidebar({ tab, setTab }) {
+function Sidebar({ tab, setTab, user, onSignOut }) {
   const nav = [
     { id: "chat",      label: "Chat",      icon: IconChat },
     { id: "upload",    label: "Upload",    icon: IconUpload },
     { id: "deadlines", label: "Deadlines", icon: IconCalendar },
     { id: "careers",   label: "Careers",   icon: IconBriefcase },
   ];
+  const initial = (user?.email || "?")[0].toUpperCase();
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -114,16 +144,82 @@ function Sidebar({ tab, setTab }) {
       </nav>
       <div className="sidebar-footer">
         <div className="user-pill">
-          <span className="user-avatar">A</span>
-          <div>
-            <div className="user-name">Aanya · 3rd year</div>
-            <div className="user-meta">CSE · demo workspace</div>
+          <span className="user-avatar">{initial}</span>
+          <div className="user-pill-text">
+            <div className="user-name">{user?.email || "Not signed in"}</div>
+            <div className="user-meta">demo workspace</div>
           </div>
+          {user && (
+            <button type="button" className="user-signout mono" onClick={onSignOut} title="Sign out">
+              sign out
+            </button>
+          )}
         </div>
         <div className="footer-mono">grounded answers · RAG over your PDFs</div>
       </div>
     </aside>
   );
+}
+
+function AuthGate({ onSignIn }) {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  function submit(e) {
+    e?.preventDefault?.();
+    const v = email.trim();
+    if (!isEmailish(v)) return;
+    setSent(true);
+    // Brief "magic link sent" toast then sign in.
+    setTimeout(() => onSignIn(v), 900);
+  }
+
+  return (
+    <div className="modal-backdrop auth-backdrop">
+      <div className="modal auth-modal" role="dialog" aria-modal="true" aria-label="Sign in">
+        <header className="modal-head auth-head">
+          <div>
+            <div className="modal-eyebrow mono">Sign in</div>
+            <h2 className="modal-title">Get a magic link</h2>
+          </div>
+        </header>
+        <form className="auth-body" onSubmit={submit}>
+          <label className="auth-label" htmlFor="auth-email">College email</label>
+          <input
+            id="auth-email"
+            ref={inputRef}
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="you@university.edu"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={sent}
+            required
+          />
+          <button
+            type="submit"
+            className="auth-submit"
+            disabled={sent || !isEmailish(email)}
+          >
+            {sent ? "Check your inbox…" : "Send magic link"}
+          </button>
+          <p className="auth-note mono">
+            Demo: no real email is sent. We unlock the workspace as soon as you submit.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function isEmailish(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
 // ---------- Chat ------------------------------------------------------------
