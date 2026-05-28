@@ -28,6 +28,16 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 function App() {
   const [tab, setTab] = useState("chat");
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [docs, setDocs] = useState(SEED.documents);
+
+  // Flip any initially-processing seed doc to ready after a short delay so
+  // the demo shows the transition. Shared between Chat (counts) and Upload.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDocs((d) => d.map((x) => (x.status === "processing" ? { ...x, status: "ready" } : x)));
+    }, 4500);
+    return () => clearTimeout(t);
+  }, []);
 
   // Apply tweak values to CSS vars so styles cascade.
   useEffect(() => {
@@ -48,8 +58,8 @@ function App() {
     <div className="app">
       <Sidebar tab={tab} setTab={setTab} />
       <main className="surface" data-screen-label={tab}>
-        {tab === "chat"      && <ChatScreen />}
-        {tab === "upload"    && <UploadScreen />}
+        {tab === "chat"      && <ChatScreen docs={docs} />}
+        {tab === "upload"    && <UploadScreen docs={docs} setDocs={setDocs} />}
         {tab === "deadlines" && <DeadlinesScreen />}
         {tab === "careers"   && <CareersScreen />}
       </main>
@@ -127,7 +137,7 @@ function Sidebar({ tab, setTab }) {
 }
 
 // ---------- Chat ------------------------------------------------------------
-function ChatScreen() {
+function ChatScreen({ docs }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -207,7 +217,7 @@ function ChatScreen() {
           <p className="subtle">Every answer cites the source PDF. Nothing else.</p>
         </div>
         <div className="header-meta">
-          <span className="mono-pill">{SEED.documents.filter(d => d.status === "ready").length} docs indexed</span>
+          <span className="mono-pill">{docs.filter((d) => d.status === "ready").length} docs indexed</span>
         </div>
       </header>
 
@@ -218,7 +228,7 @@ function ChatScreen() {
           {pending && messages[messages.length - 1]?.content === "" && (
             <div className="thinking">
               <span /><span /><span />
-              <span className="thinking-label">retrieving from {SEED.documents.length} docs…</span>
+              <span className="thinking-label">retrieving from {docs.length} docs…</span>
             </div>
           )}
         </div>
@@ -239,6 +249,16 @@ function ChatScreen() {
         </div>
         <div className="composer-meta">
           <span className="mono">grounded · top-6 cosine · cite-or-decline</span>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              className="composer-clear"
+              onClick={() => !pending && setMessages([])}
+              disabled={pending}
+            >
+              clear
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -305,32 +325,25 @@ function renderWithCitations(text, citations) {
     if (!m) return <span key={i}>{p}</span>;
     const n = Number(m[1]);
     const c = citations.find((x) => x.index === n);
+    if (!c) return <span key={i}>{p}</span>;
     return (
-      <sup key={i} className="inline-citation" title={c?.doc || ""}>{n}</sup>
+      <sup key={i} className="inline-citation" title={c.doc}>{n}</sup>
     );
   });
 }
 
 // ---------- Upload ----------------------------------------------------------
-function UploadScreen() {
+function UploadScreen({ docs, setDocs }) {
   const [drag, setDrag] = useState(false);
-  const [docs, setDocs] = useState(SEED.documents);
 
-  // Simulate processing → ready transition for the doc that starts processing.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setDocs((d) =>
-        d.map((x) => (x.status === "processing" ? { ...x, status: "ready" } : x))
-      );
-    }, 4500);
-    return () => clearTimeout(t);
-  }, []);
-
-  function fakeDrop() {
+  function fakeDrop(droppedFile) {
     const id = "d" + Math.random().toString(36).slice(2, 7);
+    const titleFromFile = droppedFile?.name
+      ? droppedFile.name.replace(/\.pdf$/i, "")
+      : "New Campus Notice " + new Date().toLocaleTimeString();
     const newDoc = {
       id,
-      title: "New Campus Notice " + new Date().toLocaleTimeString(),
+      title: titleFromFile,
       kind: "notice",
       status: "processing",
       created_at: new Date().toISOString(),
@@ -354,8 +367,13 @@ function UploadScreen() {
         className={`dropzone ${drag ? "drag" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
-        onDrop={(e) => { e.preventDefault(); setDrag(false); fakeDrop(); }}
-        onClick={fakeDrop}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDrag(false);
+          const file = e.dataTransfer?.files?.[0];
+          fakeDrop(file);
+        }}
+        onClick={() => fakeDrop()}
       >
         <div className="drop-icon"><IconUpload /></div>
         <div className="drop-title">Drop campus PDFs here</div>

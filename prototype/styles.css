@@ -255,7 +255,23 @@ input { font: inherit; }
   min-width: 64px;
 }
 .composer-inner button:disabled { opacity: 0.4; cursor: not-allowed; }
-.composer-meta { text-align: center; color: var(--muted); margin-top: 8px; }
+.composer-meta {
+  display: flex; justify-content: center; align-items: center; gap: 14px;
+  color: var(--muted); margin-top: 8px;
+}
+.composer-clear {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 2px 10px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.composer-clear:hover { color: var(--ink); border-color: var(--ink-2); }
+.composer-clear:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* --- Upload --------------------------------------------------------------- */
 .dropzone {
@@ -450,4 +466,52 @@ input { font: inherit; }
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* --- Mobile ---------------------------------------------------------------
+   Phone-sized viewports: turn the sidebar into a bottom tab bar, shrink the
+   pads, and let the calendar collapse into a compact list per cell. */
+@media (max-width: 720px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+
+  .sidebar {
+    order: 2;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    padding: 6px 8px;
+    border-right: 0;
+    border-top: 1px solid var(--rule);
+    background: rgba(255, 253, 248, 0.95);
+    position: sticky; bottom: 0; z-index: 5;
+  }
+  .brand, .sidebar-footer { display: none; }
+  .sidebar nav { display: flex; flex: 1; gap: 2px; }
+  .sidebar nav .nav-item {
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 0;
+    font-size: 11px;
+    text-align: center;
+    border-radius: 8px;
+  }
+
+  .surface { order: 1; }
+  .screen-pad { padding: 22px 18px 32px; }
+  .chat-screen { height: auto; }
+  .chat-screen .screen-header { padding: 22px 18px 14px; }
+  .chat-scroll { padding: 18px; }
+  .composer { padding: 12px 18px 14px; }
+  .display { font-size: 26px; }
+  .screen-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+
+  .cal-cell { min-height: 56px; padding: 4px; }
+  .cal-item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 10px;
+  }
+  .cal-dow { padding: 6px 2px; font-size: 9.5px; }
 }
