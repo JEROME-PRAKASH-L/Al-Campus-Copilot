@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+html, body { height: 100%; }
+body {
+  background: theme(colors.paper);
+  color: theme(colors.ink);
+  font-family: theme(fontFamily.sans);
+  font-feature-settings: "ss01", "cv11";
+}
+.font-serif { font-family: theme(fontFamily.serif); }
+.font-mono  { font-family: theme(fontFamily.mono); }
+
+/* Soft paper grain so it doesn't feel flat. */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(122,82,48,0.04) 1px, transparent 1px);
+  background-size: 14px 14px;
+  z-index: 0;
+}
+main, aside, header { position: relative; z-index: 1; }
