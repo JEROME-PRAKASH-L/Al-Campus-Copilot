@@ -457,8 +457,30 @@ function DeadlinesScreen() {
 }
 
 function CalendarView({ items }) {
-  // March 2026 — Sunday-start grid; bucket items per day.
-  const year = 2026, month = 2; // March (0-indexed)
+  // Render a grid per month that actually has items, in chronological order.
+  const months = useMemo(() => {
+    const seen = new Map();
+    items.forEach((d) => {
+      const dt = new Date(d.date);
+      const key = dt.getFullYear() * 12 + dt.getMonth();
+      if (!seen.has(key)) seen.set(key, { year: dt.getFullYear(), month: dt.getMonth() });
+    });
+    return [...seen.values()].sort((a, b) => (a.year - b.year) || (a.month - b.month));
+  }, [items]);
+
+  if (!months.length) {
+    return <div className="cal"><div className="cal-head">No deadlines yet</div></div>;
+  }
+  return (
+    <div className="cal-stack">
+      {months.map((m) => (
+        <MonthGrid key={`${m.year}-${m.month}`} year={m.year} month={m.month} items={items} />
+      ))}
+    </div>
+  );
+}
+
+function MonthGrid({ year, month, items }) {
   const first = new Date(year, month, 1);
   const startDow = first.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -475,11 +497,13 @@ function CalendarView({ items }) {
     return acc;
   }, {});
 
+  const heading = first.toLocaleString("en-US", { month: "long", year: "numeric" });
+
   return (
     <div className="cal">
-      <div className="cal-head">March 2026</div>
+      <div className="cal-head">{heading}</div>
       <div className="cal-grid">
-        {["S","M","T","W","T","F","S"].map((d, i) => (
+        {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d, i) => (
           <div key={i} className="cal-dow mono">{d}</div>
         ))}
         {cells.map((c, i) => (

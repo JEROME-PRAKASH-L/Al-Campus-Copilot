@@ -382,6 +382,7 @@ input { font: inherit; }
 }
 
 /* Calendar */
+.cal-stack { display: flex; flex-direction: column; gap: 16px; }
 .cal { border: 1px solid var(--rule); border-radius: 12px; background: white; overflow: hidden; }
 .cal-head { font-family: var(--headline-font); font-size: 16px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
