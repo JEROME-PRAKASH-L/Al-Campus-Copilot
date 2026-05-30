@@ -462,9 +462,20 @@ function DeadlinesScreen() {
           <h1 className="display">Deadlines</h1>
           <p className="subtle">Auto-extracted from your notices. Confidence shown per item.</p>
         </div>
-        <div className="seg">
-          <button className={view === "timeline" ? "on" : ""} onClick={() => setView("timeline")}>Timeline</button>
-          <button className={view === "calendar" ? "on" : ""} onClick={() => setView("calendar")}>Calendar</button>
+        <div className="deadlines-actions">
+          <div className="seg">
+            <button className={view === "timeline" ? "on" : ""} onClick={() => setView("timeline")}>Timeline</button>
+            <button className={view === "calendar" ? "on" : ""} onClick={() => setView("calendar")}>Calendar</button>
+          </div>
+          <button
+            type="button"
+            className="ics-btn"
+            onClick={() => downloadIcs(items)}
+            title="Download an .ics file you can import into Google / Apple / Outlook Calendar"
+          >
+            <IconDownload />
+            <span>Subscribe in Calendar</span>
+          </button>
         </div>
       </header>
 
@@ -624,6 +635,61 @@ function Row({ label, value, accent }) {
   );
 }
 
+// ---------- .ics export -----------------------------------------------------
+function deadlinesToIcs(items) {
+  // Build a minimal RFC-5545 VCALENDAR with one all-day VEVENT per deadline.
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//AI Campus Copilot//Prototype//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:Campus Copilot Deadlines",
+  ];
+  const stamp = new Date()
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d+/, "");
+  for (const d of items) {
+    const start = d.date.replace(/-/g, "");
+    const end = new Date(new Date(d.date).getTime() + 86400000)
+      .toISOString()
+      .slice(0, 10)
+      .replace(/-/g, "");
+    const uid = `cc-${d.id}@campuscopilot.local`;
+    const kind = (d.kind || "event").toUpperCase();
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${start}`,
+      `DTEND;VALUE=DATE:${end}`,
+      `SUMMARY:${icsEscape(d.title)}`,
+      `DESCRIPTION:${icsEscape(`From "${d.doc}"`)}`,
+      `CATEGORIES:${kind}`,
+      "END:VEVENT"
+    );
+  }
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function icsEscape(s) {
+  return String(s).replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
+}
+
+function downloadIcs(items) {
+  const blob = new Blob([deadlinesToIcs(items)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "campus-deadlines.ics";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // ---------- Helpers ---------------------------------------------------------
 function composeOfflineAnswer(question, retrieved) {
   const tokens = (question.toLowerCase().match(/[a-z0-9]+/g) || []).filter((t) => t.length > 2);
@@ -693,6 +759,7 @@ const IconUpload    = () => <Svg><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2
 const IconCalendar  = () => <Svg><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Svg>;
 const IconBriefcase = () => <Svg><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></Svg>;
 const IconDoc       = () => <Svg><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></Svg>;
+const IconDownload  = () => <Svg><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Svg>;
 
 // ---------- Mount -----------------------------------------------------------
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);

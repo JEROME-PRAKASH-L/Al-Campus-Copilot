@@ -378,6 +378,20 @@ input { font: inherit; }
 .seg button.on { background: white; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
 .seg-tight { margin-bottom: 20px; }
 
+.deadlines-actions { display: flex; align-items: center; gap: 10px; }
+.ics-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--paper);
+  background: var(--accent);
+  border-radius: 8px;
+  padding: 7px 12px;
+  transition: filter 0.12s, transform 0.12s;
+}
+.ics-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.ics-btn svg { color: var(--paper); }
+
 /* --- Deadlines ------------------------------------------------------------ */
 .month { margin-bottom: 30px; }
 .month-title {
